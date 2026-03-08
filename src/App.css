@@ -1,0 +1,287 @@
+:root {
+  --bg: #f6f3ed;
+  --surface: #fffdf9;
+  --ink: #171717;
+  --muted: #666257;
+  --line: #e7e0d4;
+  --accent: #d97706;
+  --accent-ink: #fff9ef;
+  --shadow: 0 18px 40px rgba(32, 24, 15, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  background:
+    radial-gradient(circle at top, rgba(217, 119, 6, 0.14), transparent 28%),
+    linear-gradient(180deg, #fbf8f2 0%, #f2ece2 100%);
+  color: var(--ink);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 18px 12px 32px;
+}
+
+.phone-shell {
+  width: min(100%, 430px);
+}
+
+.hero,
+.panel,
+.post-card,
+.stats article {
+  background: rgba(255, 253, 249, 0.92);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.hero {
+  border-radius: 28px;
+  padding: 20px;
+  margin-bottom: 14px;
+}
+
+.hero h1 {
+  margin: 8px 0 10px;
+  font-size: 34px;
+  line-height: 0.95;
+}
+
+.hero p,
+.panel-copy,
+.status-ok,
+.status-error {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.eyebrow {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #fff2de;
+  color: #a85b00;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.stats article {
+  border-radius: 20px;
+  padding: 14px 12px;
+}
+
+.stats span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.stats strong {
+  font-size: 22px;
+}
+
+.panel {
+  border-radius: 24px;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+
+.panel h2,
+.dashboard-head h2,
+.post-card h3 {
+  margin: 0 0 12px;
+}
+
+.panel label {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.panel label span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.panel input,
+.panel textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: #fffcf7;
+}
+
+.panel textarea {
+  min-height: 170px;
+  resize: vertical;
+  margin-bottom: 12px;
+}
+
+.primary-button,
+.secondary-button,
+.download-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: none;
+  text-decoration: none;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary-button {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.secondary-button,
+.download-link {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.status-ok {
+  margin-top: 10px;
+  color: #047857;
+}
+
+.status-error {
+  margin-top: 10px;
+  color: #b91c1c;
+}
+
+.dashboard {
+  display: grid;
+  gap: 14px;
+}
+
+.dashboard-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pager-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.post-card {
+  border-radius: 24px;
+  padding: 16px;
+}
+
+.post-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #fff2de;
+  color: #a85b00;
+  font-weight: 700;
+}
+
+.media-frame {
+  width: 100%;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #0f172a;
+  margin-bottom: 12px;
+}
+
+.post-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.post-grid span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.post-grid strong {
+  font-size: 14px;
+}
+
+.download-link {
+  width: 100%;
+}
+
+.pagination {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.secondary-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (min-width: 700px) {
+  .app-shell::before {
+    content: "Mobile-first preview";
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid var(--line);
+    padding: 8px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+}

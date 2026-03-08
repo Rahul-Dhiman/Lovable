@@ -1,0 +1,12 @@
+{
+  "name": "creator-gallery",
+  "version": "0.1.0",
+  "private": true,
+  "proxy": "http://localhost:3012",
+  "scripts": {
+    "start": "PORT=3011 BROWSER=none ../node_modules/.bin/react-scripts start",
+    "build": "../node_modules/.bin/react-scripts build",
+    "server": "node server.js",
+    "dev": "node dev.js"
+  }
+}
