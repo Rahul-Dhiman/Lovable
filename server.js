@@ -9,6 +9,7 @@ const ROOT = __dirname;
 const CONFIG_PATH = path.join(ROOT, 'creator.config.json');
 const COOKIE_PATH = path.join(ROOT, 'creatorCookies', 'cookie.txt');
 const CREATORS_DIR = path.join(ROOT, 'creators');
+const OFFICIAL_API_HOST = 'api.official.me';
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, {
@@ -78,6 +79,11 @@ function extractCookieHeader(input) {
 function getCreatorPosts(creatorId) {
   const postsPath = path.join(CREATORS_DIR, creatorId, 'posts.json');
   return readJson(postsPath, []);
+}
+
+function getConfiguredCreatorId() {
+  const config = readJson(CONFIG_PATH, {});
+  return config.influencerId || '';
 }
 
 function getMediaUrl(post) {
@@ -156,6 +162,76 @@ function validateMediaAccess(creatorId) {
   });
 }
 
+function fetchInfluencerByUsername(username) {
+  return new Promise((resolve) => {
+    const cleanUsername = String(username || '')
+      .trim()
+      .replace(/^@+/, '');
+
+    if (!cleanUsername) {
+      resolve({ ok: false, reason: 'username is required.' });
+      return;
+    }
+
+    const requestPath = `/influencer/${encodeURIComponent(cleanUsername)}`;
+    const upstream = https.request(
+      {
+        protocol: 'https:',
+        hostname: OFFICIAL_API_HOST,
+        path: requestPath,
+        method: 'GET',
+        headers: {
+          Accept: 'application/json, text/plain, */*',
+          Origin: 'https://official.me',
+          Referer: 'https://official.me/',
+          'User-Agent': 'Mozilla/5.0',
+          'x-off-country-code': 'IN',
+        },
+      },
+      (upstreamRes) => {
+        let buffer = '';
+        upstreamRes.on('data', (chunk) => {
+          buffer += chunk.toString('utf8');
+        });
+        upstreamRes.on('end', () => {
+          try {
+            const parsed = JSON.parse(buffer || '{}');
+            const influencerId = parsed?.data?._id || '';
+            if (
+              upstreamRes.statusCode === 200 &&
+              parsed?.status === true &&
+              influencerId
+            ) {
+              resolve({
+                ok: true,
+                influencerId,
+                username: parsed?.data?.username || cleanUsername,
+                name: parsed?.data?.name || '',
+              });
+              return;
+            }
+
+            resolve({
+              ok: false,
+              reason:
+                parsed?.message ||
+                `Influencer lookup failed with status ${upstreamRes.statusCode}.`,
+            });
+          } catch (error) {
+            resolve({ ok: false, reason: `Lookup parse error: ${error.message}` });
+          }
+        });
+      }
+    );
+
+    upstream.on('error', (error) => {
+      resolve({ ok: false, reason: `Lookup request failed: ${error.message}` });
+    });
+
+    upstream.end();
+  });
+}
+
 const server = http.createServer(async (req, res) => {
   const requestUrl = new URL(req.url, `http://${req.headers.host}`);
 
@@ -175,17 +251,59 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET' && requestUrl.pathname === '/api/creator/config') {
-    sendJson(res, 200, readJson(CONFIG_PATH, {}));
+    const current = readJson(CONFIG_PATH, {});
+    sendJson(res, 200, {
+      displayName: current.displayName || 'Creator Gallery',
+      username: current.username || '',
+      influencerId: current.influencerId || '',
+    });
     return;
   }
 
   if (req.method === 'POST' && requestUrl.pathname === '/api/creator/config') {
     const raw = await readBody(req);
-    const payload = JSON.parse(raw || '{}');
+    let payload;
+    try {
+      payload = JSON.parse(raw || '{}');
+    } catch (error) {
+      sendJson(res, 400, { ok: false, message: 'Invalid JSON body.' });
+      return;
+    }
+
+    const username = String(payload.username || '')
+      .trim()
+      .replace(/^@+/, '');
+    let influencerId = String(payload.influencerId || '').trim();
+    let resolvedName = '';
+
+    if (username) {
+      const lookup = await fetchInfluencerByUsername(username);
+      if (!lookup.ok) {
+        sendJson(res, 400, {
+          ok: false,
+          message: lookup.reason || 'Could not resolve username.',
+        });
+        return;
+      }
+      influencerId = lookup.influencerId;
+      resolvedName = lookup.name;
+    }
+
+    if (!influencerId) {
+      sendJson(res, 400, {
+        ok: false,
+        message: 'username is required to resolve influencerId.',
+      });
+      return;
+    }
+
     const nextConfig = {
-      displayName: payload.displayName || 'Creator Gallery',
-      influencerId: payload.influencerId || '',
-      userId: payload.userId || '',
+      displayName:
+        String(payload.displayName || '').trim() ||
+        resolvedName ||
+        'Creator Gallery',
+      username,
+      influencerId,
     };
 
     ensureDir(CONFIG_PATH);
@@ -221,7 +339,15 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET' && requestUrl.pathname === '/api/cookies/status') {
-    const creatorId = requestUrl.searchParams.get('creatorId') || '';
+    const creatorId =
+      requestUrl.searchParams.get('creatorId') || getConfiguredCreatorId();
+    if (!creatorId) {
+      sendJson(res, 200, {
+        ok: false,
+        reason: 'No creatorId found. Save a username first.',
+      });
+      return;
+    }
     const result = await validateMediaAccess(creatorId);
     sendJson(res, 200, result);
     return;

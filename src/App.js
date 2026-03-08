@@ -61,11 +61,12 @@ function getMediaTarget(post) {
 export default function App() {
   const [config, setConfig] = useState({
     displayName: 'Creator First',
-    influencerId: '616c9b089c57e60021521b21',
-    userId: '662234554628d00021b0acab',
+    username: '',
+    influencerId: '',
   });
   const [cookieText, setCookieText] = useState('');
   const [cookieStatus, setCookieStatus] = useState(null);
+  const [setupStatus, setSetupStatus] = useState(null);
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('loading');
@@ -75,7 +76,8 @@ export default function App() {
     const saved = window.localStorage.getItem(LOCAL_STORAGE_KEY);
     if (saved) {
       try {
-        setConfig(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setConfig((current) => ({ ...current, ...parsed }));
       } catch (error) {
         // ignore malformed local storage
       }
@@ -84,8 +86,8 @@ export default function App() {
     fetch('/api/creator/config')
       .then((response) => response.json())
       .then((data) => {
-        if (data?.influencerId) {
-          setConfig(data);
+        if (data?.username || data?.influencerId) {
+          setConfig((current) => ({ ...current, ...data }));
         }
       })
       .finally(() => {
@@ -104,13 +106,46 @@ export default function App() {
   }, [config.influencerId]);
 
   async function saveConfig() {
-    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(config));
-    await fetch('/api/creator/config', {
+    const username = config.username.trim().replace(/^@+/, '');
+    if (!username) {
+      setSetupStatus({
+        ok: false,
+        message: 'Username is required.',
+      });
+      return;
+    }
+
+    setSetupStatus({
+      loading: true,
+      message: 'Resolving username...',
+    });
+
+    const response = await fetch('/api/creator/config', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(config),
+      body: JSON.stringify({
+        displayName: config.displayName,
+        username,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data?.ok) {
+      setSetupStatus({
+        ok: false,
+        message: data?.message || 'Could not resolve that username.',
+      });
+      return;
+    }
+
+    const nextConfig = data.config || { ...config, username };
+    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(nextConfig));
+    setConfig((current) => ({ ...current, ...nextConfig }));
+    setSetupStatus({
+      ok: true,
+      message: `Connected to @${nextConfig.username}`,
     });
     setView('cookies');
   }
@@ -194,8 +229,8 @@ export default function App() {
           <section className="panel">
             <h2>Creator setup</h2>
             <p className="panel-copy">
-              Save creator metadata locally and on the local backend. The app
-              does not store bearer tokens or auth keys.
+              Save creator metadata by username only. The backend resolves the
+              creator ID automatically and does not store bearer tokens.
             </p>
             <label>
               <span>Display name</span>
@@ -210,32 +245,29 @@ export default function App() {
               />
             </label>
             <label>
-              <span>Influencer ID</span>
+              <span>Username</span>
               <input
-                value={config.influencerId}
+                value={config.username}
+                placeholder="bloody_top"
                 onChange={(event) =>
                   setConfig((current) => ({
                     ...current,
-                    influencerId: event.target.value,
+                    username: event.target.value,
                   }))
                 }
               />
             </label>
-            <label>
-              <span>User ID</span>
-              <input
-                value={config.userId}
-                onChange={(event) =>
-                  setConfig((current) => ({
-                    ...current,
-                    userId: event.target.value,
-                  }))
-                }
-              />
-            </label>
+            {config.influencerId ? (
+              <p className="panel-copy">Resolved influencer ID: {config.influencerId}</p>
+            ) : null}
             <button className="primary-button" onClick={saveConfig}>
               Continue to cookie check
             </button>
+            {setupStatus ? (
+              <p className={setupStatus.ok ? 'status-ok' : 'status-error'}>
+                {setupStatus.loading ? 'Resolving username...' : setupStatus.message}
+              </p>
+            ) : null}
           </section>
         ) : null}
 
