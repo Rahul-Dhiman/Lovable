@@ -47,5 +47,6 @@ startProcess('creator-frontend', reactScriptsBin, ['start'], {
   env: {
     PORT: '3011',
     BROWSER: 'none',
+    DANGEROUSLY_DISABLE_HOST_CHECK: 'true',
   },
 });

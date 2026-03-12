@@ -1,0 +1,11 @@
+HTTP/1.1 200 OK
+Access-Control-Allow-Origin: *
+Content-Type: video/mp4
+Content-Length: 26495187
+Content-Disposition: attachment; filename="test-video.mp4"
+Cache-Control: no-store
+X-Download-Tool: aria2c
+Date: Sun, 08 Mar 2026 16:09:34 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+

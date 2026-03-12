@@ -145,6 +145,12 @@ textarea {
   margin-bottom: 12px;
 }
 
+.panel .primary-button,
+.panel .secondary-button {
+  margin-top: 8px;
+  margin-right: 8px;
+}
+
 .primary-button,
 .secondary-button,
 .download-link {
@@ -194,6 +200,13 @@ textarea {
   gap: 12px;
 }
 
+.dashboard-head-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .pager-bar {
   display: flex;
   align-items: center;
@@ -237,6 +250,25 @@ textarea {
   margin-bottom: 12px;
 }
 
+.media-placeholder {
+  border: 1px dashed var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  margin-bottom: 12px;
+  background: #fff7ea;
+}
+
+.media-placeholder p {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.media-control-button {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
 .post-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -258,6 +290,11 @@ textarea {
 
 .download-link {
   width: 100%;
+}
+
+.download-link[aria-disabled="true"] {
+  opacity: 0.45;
+  pointer-events: none;
 }
 
 .pagination {

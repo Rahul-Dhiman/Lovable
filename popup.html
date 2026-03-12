@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JS Recon</title>
+    <style>
+      :root {
+        --bg: #020617;
+        --panel: #0f172a;
+        --card: #1e293b;
+        --border: #334155;
+        --text: #f1f5f9;
+        --muted: #94a3b8;
+        --blue: #3b82f6;
+        --cyan: #06b6d4;
+        --green: #10b981;
+        --red: #ef4444;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        width: 340px;
+        min-height: 220px;
+        background: radial-gradient(circle at top, #0f172a, #020617 70%);
+        color: var(--text);
+        font: 14px/1.4 "Segoe UI", system-ui, sans-serif;
+      }
+      .wrap {
+        padding: 18px;
+      }
+      .title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+      .subtitle {
+        color: var(--muted);
+        font-size: 0.88rem;
+        margin-bottom: 14px;
+      }
+      .card {
+        background: rgba(30, 41, 59, 0.85);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 14px;
+      }
+      .label {
+        color: var(--muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 6px;
+      }
+      .value {
+        font-weight: 600;
+        word-break: break-word;
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 0.82rem;
+        margin-top: 6px;
+        word-break: break-word;
+      }
+      .status {
+        color: var(--muted);
+        font-size: 0.84rem;
+        min-height: 38px;
+        margin-bottom: 14px;
+      }
+      .status.error {
+        color: var(--red);
+      }
+      .actions {
+        display: grid;
+        gap: 10px;
+      }
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 11px 14px;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.65;
+      }
+      .primary {
+        background: linear-gradient(135deg, var(--blue), var(--cyan));
+        color: white;
+        font-weight: 700;
+      }
+      .secondary {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text);
+      }
+      .hint {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+      .ok {
+        color: var(--green);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="title">JS Recon Dashboard</div>
+      <div class="subtitle">Attach the scanner to the current tab, then open the full dashboard.</div>
+
+      <div class="card">
+        <div class="label">Current Tab</div>
+        <div class="value" id="tabTitle">Checking active tab...</div>
+        <div class="meta" id="tabUrl"></div>
+      </div>
+
+      <div class="status" id="statusText"></div>
+
+      <div class="actions">
+        <button class="primary" id="scanTabButton">Scan Current Tab</button>
+        <button class="secondary" id="openDashboardButton">Open Dashboard</button>
+      </div>
+
+      <div class="hint" id="hintText">
+        Use on `http`, `https`, or permitted `file` pages. File pages require enabling "Allow access to file URLs".
+      </div>
+    </div>
+
+    <script src="./popup.js"></script>
+  </body>
+</html>

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 const LOCAL_STORAGE_KEY = 'creatorGalleryConfig';
-const POSTS_PER_PAGE = 50;
+const POSTS_PER_PAGE = 5;
 
 function decodeContent(value) {
   if (!value) return 'Untitled post';
@@ -19,6 +19,11 @@ function formatDuration(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = `${totalSeconds % 60}`.padStart(2, '0');
   return `${minutes}:${seconds}`;
+}
+
+function getDurationValue(post) {
+  const duration = Number(post?.duration);
+  return Number.isFinite(duration) ? duration : -1;
 }
 
 function formatDate(value) {
@@ -39,23 +44,146 @@ function formatPrice(value) {
   }).format(value);
 }
 
-function getMediaTarget(post) {
-  const candidates = [
-    post.location,
-    post.postUrl,
-    post.cf_preview,
-    post.cf_thumbnail,
-    post.thumbnailLocation,
-    post.key,
-    post.source,
-  ].filter(Boolean);
+function normalizeMediaUrl(pathValue) {
+  const value = String(pathValue || '').trim();
+  if (!value) return '';
+  if (/^https?:\/\//i.test(value)) return value;
+  return `https://cdn.official.me/${value.replace(/^\/+/, '')}`;
+}
 
-  const path = candidates[0];
-  if (!path) return null;
-  const target = /^https?:\/\//i.test(path)
-    ? path
-    : `https://cdn.official.me/${path.replace(/^\/+/, '')}`;
-  return `/api/media?url=${encodeURIComponent(target)}`;
+function isVideoUrl(url) {
+  return /\.(mp4|mov|m4v|webm|mkv|avi)(?:$|[?#])/i.test(url);
+}
+
+function isImageUrl(url) {
+  return /\.(jpg|jpeg|png|webp|gif|bmp|avif)(?:$|[?#])/i.test(url);
+}
+
+function matchesPostType(url, type) {
+  if (type === 'Video') return isVideoUrl(url);
+  if (type === 'Image') return isImageUrl(url);
+  return true;
+}
+
+function scoreMediaCandidate(candidate) {
+  const url = candidate.url.toLowerCase();
+  let score = 0;
+  if (candidate.field === 'source') score += 100;
+  if (!url.includes('/compressed/')) score += 40;
+  if (!url.includes('thumbnail')) score += 20;
+  if (!url.includes('preview')) score += 15;
+  if (url.includes('/media/')) score += 10;
+  if (url.includes('cloudfront')) score += 5;
+  return score;
+}
+
+function isPrivateHostName(hostname) {
+  if (!hostname) return false;
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+    return true;
+  }
+  if (/^10\./.test(hostname)) return true;
+  if (/^192\.168\./.test(hostname)) return true;
+  return /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname);
+}
+
+function getBestMediaUrl(post) {
+  const rawCandidates = [
+    ['source', post.source],
+    ['location', post.location],
+    ['postUrl', post.postUrl],
+    ['key', post.key],
+    ['cf_preview', post.cf_preview],
+    ['cf_thumbnail', post.cf_thumbnail],
+    ['thumbnailLocation', post.thumbnailLocation],
+  ];
+
+  const candidates = rawCandidates
+    .map(([field, value], index) => ({
+      field,
+      index,
+      url: normalizeMediaUrl(value),
+    }))
+    .filter((entry) => entry.url);
+
+  if (!candidates.length) return null;
+
+  const matchedType = candidates.filter((entry) =>
+    matchesPostType(entry.url, post.type)
+  );
+  const pool = matchedType.length ? matchedType : candidates;
+
+  pool.sort((a, b) => {
+    const scoreDiff = scoreMediaCandidate(b) - scoreMediaCandidate(a);
+    if (scoreDiff !== 0) return scoreDiff;
+    return a.index - b.index;
+  });
+
+  return pool[0].url;
+}
+
+function getBackendApiOrigin() {
+  if (typeof window === 'undefined') return '';
+  const configuredOrigin = String(process.env.REACT_APP_API_ORIGIN || '')
+    .trim()
+    .replace(/\/+$/, '');
+  if (configuredOrigin) return configuredOrigin;
+
+  const backendPort = String(process.env.REACT_APP_API_PORT || '3012').trim();
+  const { protocol, hostname, port } = window.location;
+  if (port === backendPort) return '';
+
+  if (isPrivateHostName(hostname)) {
+    return `${protocol}//${hostname}:${backendPort}`;
+  }
+
+  return '';
+}
+
+function toBackendApiUrl(apiPath) {
+  const backendOrigin = getBackendApiOrigin();
+  return backendOrigin ? `${backendOrigin}${apiPath}` : apiPath;
+}
+
+function getMediaTarget(mediaUrl) {
+  if (!mediaUrl) return null;
+  return toBackendApiUrl(`/api/media?url=${encodeURIComponent(mediaUrl)}`);
+}
+
+function sanitizeDownloadName(input) {
+  const value = String(input || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return value || 'download';
+}
+
+function getExtensionFromMediaUrl(mediaUrl) {
+  try {
+    const parsed = new URL(mediaUrl);
+    const match = parsed.pathname.match(/\.([a-z0-9]{2,5})$/i);
+    return match ? `.${match[1].toLowerCase()}` : '';
+  } catch (error) {
+    return '';
+  }
+}
+
+function getDownloadFileName(post, mediaUrl) {
+  const ext = getExtensionFromMediaUrl(mediaUrl);
+  const fallbackExt = post.type === 'Image' ? '.jpg' : '.mp4';
+  const base =
+    sanitizeDownloadName(post._id) ||
+    sanitizeDownloadName(decodeContent(post.content)) ||
+    'download';
+  return `${base}${ext || fallbackExt}`;
+}
+
+function getDownloadTarget(post, mediaUrl) {
+  if (!mediaUrl) return '#';
+  const filename = getDownloadFileName(post, mediaUrl);
+  return toBackendApiUrl(
+    `/api/download?url=${encodeURIComponent(mediaUrl)}&filename=${encodeURIComponent(filename)}`
+  );
 }
 
 export default function App() {
@@ -64,13 +192,51 @@ export default function App() {
     username: '',
     influencerId: '',
   });
+  const [authForm, setAuthForm] = useState({
+    bearerToken: '',
+    userId: '',
+  });
+  const [authMeta, setAuthMeta] = useState({
+    hasBearerToken: false,
+    hasUserId: false,
+    source: 'none',
+    userIdSource: 'none',
+  });
+  const [authStatus, setAuthStatus] = useState(null);
   const [cookieText, setCookieText] = useState('');
   const [cookieStatus, setCookieStatus] = useState(null);
   const [setupStatus, setSetupStatus] = useState(null);
+  const [syncStatus, setSyncStatus] = useState(null);
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(1);
+  const [activeMediaPostId, setActiveMediaPostId] = useState('');
   const [status, setStatus] = useState('loading');
   const [view, setView] = useState('setup');
+
+  const refreshAuthMeta = useCallback(async () => {
+    const response = await fetch('/api/official/auth');
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data?.ok) return;
+    setAuthMeta({
+      hasBearerToken: Boolean(data.hasBearerToken),
+      hasUserId: Boolean(data.hasUserId),
+      source: data.source || 'none',
+      userIdSource: data.userIdSource || 'none',
+    });
+  }, []);
+
+  const loadPosts = useCallback(async (creatorId) => {
+    if (!creatorId) return;
+    const response = await fetch(`/api/creators/${creatorId}/posts`);
+    const data = await response.json().catch(() => ({}));
+    setPosts(
+      Array.isArray(data.posts)
+        ? [...data.posts].sort((a, b) => getDurationValue(b) - getDurationValue(a))
+        : []
+    );
+    setPage(1);
+    setActiveMediaPostId('');
+  }, []);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -93,20 +259,101 @@ export default function App() {
       .finally(() => {
         setStatus('ready');
       });
-  }, []);
+
+    refreshAuthMeta().catch(() => {
+      // ignore auth status fetch failures during initial load
+    });
+  }, [refreshAuthMeta]);
 
   useEffect(() => {
     if (!config.influencerId) return;
-    fetch(`/api/creators/${config.influencerId}/posts`)
-      .then((response) => response.json())
-      .then((data) => {
-        setPosts(Array.isArray(data.posts) ? data.posts : []);
-        setPage(1);
+    loadPosts(config.influencerId).catch(() => {
+      setPosts([]);
+      setPage(1);
+    });
+  }, [config.influencerId, loadPosts]);
+
+  async function syncCreatorPosts(force = true) {
+    if (!config.influencerId) {
+      setSyncStatus({
+        ok: false,
+        message: 'Save a creator username first.',
       });
-  }, [config.influencerId]);
+      return;
+    }
+
+    setSyncStatus({
+      loading: true,
+      message: 'Syncing posts from upstream...',
+    });
+
+    const syncResponse = await fetch(
+      `/api/creators/${config.influencerId}/sync?username=${encodeURIComponent(
+        config.username
+      )}&force=${force ? '1' : '0'}`,
+      {
+        method: 'POST',
+      }
+    );
+    const syncData = await syncResponse.json().catch(() => ({}));
+    const sync = syncData?.sync || {};
+    setSyncStatus({
+      ok: Boolean(sync.ok),
+      message: sync.ok
+        ? `Synced ${sync.postCount || 0} posts (${sync.source || 'upstream'}).`
+        : sync.reason || 'Sync failed.',
+    });
+
+    if (sync.ok) {
+      await loadPosts(config.influencerId);
+    }
+  }
+
+  async function saveOfficialAuth() {
+    const bearerToken = authForm.bearerToken.trim();
+    const userId = authForm.userId.trim();
+    if (!bearerToken && !userId) {
+      setAuthStatus({
+        ok: false,
+        message: 'Bearer token or user ID is required.',
+      });
+      return;
+    }
+
+    setAuthStatus({
+      loading: true,
+      message: 'Saving auth token...',
+    });
+
+    const response = await fetch('/api/official/auth', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ bearerToken, userId }),
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data?.ok) {
+      setAuthStatus({
+        ok: false,
+        message: data?.message || 'Could not save auth token.',
+      });
+      return;
+    }
+
+    setAuthForm((current) => ({ ...current, bearerToken: '' }));
+    setAuthStatus({
+      ok: true,
+      message: 'Auth saved. Running post sync...',
+    });
+    await refreshAuthMeta();
+    await syncCreatorPosts(true);
+  }
 
   async function saveConfig() {
     const username = config.username.trim().replace(/^@+/, '');
+    console.log('[creator-debug] saveConfig:start', { username });
     if (!username) {
       setSetupStatus({
         ok: false,
@@ -131,6 +378,12 @@ export default function App() {
       }),
     });
     const data = await response.json().catch(() => ({}));
+    console.log('[creator-debug] saveConfig:response', {
+      ok: response.ok,
+      apiOk: data?.ok,
+      influencerId: data?.config?.influencerId,
+      sync: data?.sync || null,
+    });
 
     if (!response.ok || !data?.ok) {
       setSetupStatus({
@@ -143,15 +396,33 @@ export default function App() {
     const nextConfig = data.config || { ...config, username };
     window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(nextConfig));
     setConfig((current) => ({ ...current, ...nextConfig }));
+    const sync = data.sync || {};
+    const syncOk = Boolean(sync.ok);
     setSetupStatus({
-      ok: true,
-      message: `Connected to @${nextConfig.username}`,
+      ok: syncOk,
+      message: syncOk
+        ? `Connected to @${nextConfig.username}`
+        : sync.reason ||
+          `Connected to @${nextConfig.username}, but upstream sync failed.`,
     });
-    setView('cookies');
+    setSyncStatus({
+      ok: syncOk,
+      message: syncOk
+        ? `Synced ${sync.postCount || 0} posts (${sync.source || 'upstream'}).`
+        : sync.reason || 'Sync failed.',
+    });
+
+    await refreshAuthMeta().catch(() => {});
+    await loadPosts(nextConfig.influencerId).catch(() => {});
+    setView(syncOk ? 'cookies' : 'setup');
   }
 
   async function saveCookies() {
     setCookieStatus({ loading: true });
+    console.log('[creator-debug] saveCookies:start', {
+      influencerId: config.influencerId,
+      cookieChars: cookieText.length,
+    });
 
     const saveResponse = await fetch('/api/cookies', {
       method: 'POST',
@@ -169,15 +440,24 @@ export default function App() {
       return;
     }
 
+    await verifyCookiesForCreator();
+  }
+
+  async function verifyCookiesForCreator() {
     const verifyResponse = await fetch(
       `/api/cookies/status?creatorId=${encodeURIComponent(config.influencerId)}`
     );
     const verifyData = await verifyResponse.json();
+    console.log('[creator-debug] verifyCookiesForCreator:response', verifyData);
+
+    const successMessage = verifyData.note
+      ? `Cookie accepted. ${verifyData.note}`
+      : 'Cookie accepted. Media validation passed.';
 
     setCookieStatus({
       ok: Boolean(verifyData.ok),
       message: verifyData.ok
-        ? 'Cookie accepted. Media validation passed.'
+        ? successMessage
         : verifyData.reason || 'Cookie validation failed.',
     });
 
@@ -186,12 +466,57 @@ export default function App() {
     }
   }
 
+  async function useExistingCookies() {
+    setCookieStatus({
+      loading: true,
+      message: 'Loading existing cookie.txt...',
+    });
+
+    const existingResponse = await fetch('/api/cookies/existing');
+    const existingData = await existingResponse.json().catch(() => ({}));
+    console.log('[creator-debug] useExistingCookies:response', {
+      ok: existingResponse.ok,
+      exists: existingData.exists,
+      cookieChars: (existingData.cookiesText || '').length,
+    });
+
+    if (!existingResponse.ok || !existingData.exists) {
+      setCookieStatus({
+        ok: false,
+        message: 'No existing cookie.txt found on server.',
+      });
+      return;
+    }
+
+    setCookieText(existingData.cookiesText || '');
+    await verifyCookiesForCreator();
+  }
+
   const videoCount = posts.filter((post) => post.type === 'Video').length;
   const totalPages = Math.max(1, Math.ceil(posts.length / POSTS_PER_PAGE));
   const visiblePosts = posts.slice(
     (page - 1) * POSTS_PER_PAGE,
     page * POSTS_PER_PAGE
   );
+  const rangeStart = posts.length === 0 ? 0 : (page - 1) * POSTS_PER_PAGE + 1;
+
+  useEffect(() => {
+    if (!activeMediaPostId) return;
+    const existsInCurrentPage = visiblePosts.some((post) => {
+      const postId = String(
+        post._id ||
+          post.location ||
+          post.postUrl ||
+          post.key ||
+          post.source ||
+          `${post.type}-${post.created_at || post.date || 'unknown'}`
+      );
+      return postId === activeMediaPostId;
+    });
+    if (!existsInCurrentPage) {
+      setActiveMediaPostId('');
+    }
+  }, [activeMediaPostId, visiblePosts]);
 
   return (
     <main className="app-shell">
@@ -230,7 +555,7 @@ export default function App() {
             <h2>Creator setup</h2>
             <p className="panel-copy">
               Save creator metadata by username only. The backend resolves the
-              creator ID automatically and does not store bearer tokens.
+              creator ID automatically.
             </p>
             <label>
               <span>Display name</span>
@@ -263,9 +588,68 @@ export default function App() {
             <button className="primary-button" onClick={saveConfig}>
               Continue to cookie check
             </button>
+            <button
+              className="secondary-button"
+              onClick={() => syncCreatorPosts(true)}
+              disabled={!config.influencerId}
+            >
+              Sync posts now
+            </button>
             {setupStatus ? (
               <p className={setupStatus.ok ? 'status-ok' : 'status-error'}>
                 {setupStatus.loading ? 'Resolving username...' : setupStatus.message}
+              </p>
+            ) : null}
+            {syncStatus ? (
+              <p className={syncStatus.ok ? 'status-ok' : 'status-error'}>
+                {syncStatus.loading ? 'Syncing posts...' : syncStatus.message}
+              </p>
+            ) : null}
+
+            <h2>Official auth</h2>
+            <p className="panel-copy">
+              Needed only when local posts are empty. Save viewer user ID (or Bearer token), then sync.
+            </p>
+            <p className="panel-copy">
+              Current source: {authMeta.source}. Token:{' '}
+              {authMeta.hasBearerToken ? 'present' : 'missing'}. User ID:{' '}
+              {authMeta.hasUserId
+                ? `present (${authMeta.userIdSource})`
+                : `missing (${authMeta.userIdSource})`}
+              .
+            </p>
+            <label>
+              <span>Bearer token</span>
+              <input
+                value={authForm.bearerToken}
+                placeholder="Bearer eyJ..."
+                onChange={(event) =>
+                  setAuthForm((current) => ({
+                    ...current,
+                    bearerToken: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label>
+              <span>User ID (optional)</span>
+              <input
+                value={authForm.userId}
+                placeholder="Viewer userId (recommended)"
+                onChange={(event) =>
+                  setAuthForm((current) => ({
+                    ...current,
+                    userId: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <button className="secondary-button" onClick={saveOfficialAuth}>
+              Save auth and sync
+            </button>
+            {authStatus ? (
+              <p className={authStatus.ok ? 'status-ok' : 'status-error'}>
+                {authStatus.loading ? 'Saving auth...' : authStatus.message}
               </p>
             ) : null}
           </section>
@@ -276,8 +660,8 @@ export default function App() {
             <h2>Cookie validation</h2>
             <p className="panel-copy">
               Paste `cookies.txt` or a raw cookie string. The backend saves it to
-              `creatorCookies/cookie.txt`, validates one media request, and only
-              then unlocks the dashboard.
+              `creatorCookies/cookie.txt`, validates one media request, and only then
+              unlocks the dashboard. Or use the existing saved cookie file.
             </p>
             <textarea
               value={cookieText}
@@ -286,6 +670,9 @@ export default function App() {
             />
             <button className="primary-button" onClick={saveCookies}>
               Validate cookies
+            </button>
+            <button className="secondary-button" onClick={useExistingCookies}>
+              Use existing cookie.txt
             </button>
             {cookieStatus ? (
               <p className={cookieStatus.ok ? 'status-ok' : 'status-error'}>
@@ -301,51 +688,116 @@ export default function App() {
           <section className="dashboard">
             <div className="dashboard-head">
               <h2>All posts</h2>
-              <button
-                className="secondary-button"
-                onClick={() => setView('cookies')}
-              >
-                Update cookies
-              </button>
+              <div className="dashboard-head-actions">
+                <button
+                  className="secondary-button"
+                  onClick={() => syncCreatorPosts(true)}
+                >
+                  Sync latest
+                </button>
+                <button
+                  className="secondary-button"
+                  onClick={() => setView('cookies')}
+                >
+                  Update cookies
+                </button>
+              </div>
             </div>
+            {syncStatus ? (
+              <p className={syncStatus.ok ? 'status-ok' : 'status-error'}>
+                {syncStatus.loading ? 'Syncing posts...' : syncStatus.message}
+              </p>
+            ) : null}
 
             <div className="pager-bar">
               <span>
                 Page {page} of {totalPages}
               </span>
               <span>
-                Showing {(page - 1) * POSTS_PER_PAGE + 1}
+                Showing {rangeStart}
                 {' - '}
                 {Math.min(page * POSTS_PER_PAGE, posts.length)} of {posts.length}
               </span>
             </div>
+            <p className="panel-copy">
+              Performance mode: media loads only when you tap `Load media`, one post at a time.
+            </p>
 
             {visiblePosts.map((post) => {
-              const mediaTarget = getMediaTarget(post);
+              const bestMediaUrl = getBestMediaUrl(post);
+              const mediaTarget = getMediaTarget(bestMediaUrl);
+              const downloadTarget = getDownloadTarget(post, bestMediaUrl);
+              const postId = String(
+                post._id ||
+                  post.location ||
+                  post.postUrl ||
+                  post.key ||
+                  post.source ||
+                  `${post.type}-${post.created_at || post.date || 'unknown'}`
+              );
+              const isMediaActive = activeMediaPostId === postId;
               return (
-                <article key={post._id} className="post-card">
+                <article key={postId} className="post-card">
                   <div className="post-meta">
                     <span className="pill">{post.type}</span>
                     <span>{formatPrice(post.price)}</span>
                   </div>
                   <h3>{decodeContent(post.content)}</h3>
 
-                  {post.type === 'Video' ? (
-                    <video
-                      className="media-frame"
-                      src={mediaTarget || undefined}
-                      controls
-                      preload="metadata"
-                      playsInline
-                    />
+                  {mediaTarget && isMediaActive && post.type === 'Video' ? (
+                    <>
+                      <video
+                        className="media-frame"
+                        src={mediaTarget}
+                        controls
+                        preload="none"
+                        playsInline
+                      />
+                      <button
+                        className="secondary-button media-control-button"
+                        onClick={() => setActiveMediaPostId('')}
+                      >
+                        Stop media
+                      </button>
+                    </>
                   ) : null}
 
-                  {post.type === 'Image' ? (
-                    <img
-                      className="media-frame"
-                      src={mediaTarget || undefined}
-                      alt={decodeContent(post.content)}
-                    />
+                  {mediaTarget && isMediaActive && post.type === 'Image' ? (
+                    <>
+                      <img
+                        className="media-frame"
+                        src={mediaTarget}
+                        alt={decodeContent(post.content)}
+                        loading="eager"
+                        decoding="async"
+                      />
+                      <button
+                        className="secondary-button media-control-button"
+                        onClick={() => setActiveMediaPostId('')}
+                      >
+                        Unload media
+                      </button>
+                    </>
+                  ) : null}
+
+                  {mediaTarget && !isMediaActive ? (
+                    <div className="media-placeholder">
+                      <p>
+                        Media paused to avoid parallel loading.
+                      </p>
+                      <button
+                        className="secondary-button media-control-button"
+                        onClick={() => setActiveMediaPostId(postId)}
+                      >
+                        Load media
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {!mediaTarget ? (
+                    <div className="media-placeholder">
+                      <p>No media URL available for this post.</p>
+                    </div>
                   ) : null}
 
                   <div className="post-grid">
@@ -361,12 +813,18 @@ export default function App() {
 
                   <a
                     className="download-link"
-                    href={mediaTarget || '#'}
+                    href={downloadTarget}
                     download
                     target="_blank"
                     rel="noreferrer"
+                    aria-disabled={downloadTarget === '#'}
+                    onClick={(event) => {
+                      if (downloadTarget === '#') {
+                        event.preventDefault();
+                      }
+                    }}
                   >
-                    Download
+                    Download HQ
                   </a>
                 </article>
               );

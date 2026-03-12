@@ -1,0 +1,1167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JS Recon Dashboard v2</title>
+    <style>
+      :root {
+        --bg-deep: #020617;
+        --bg-dark: #0f172a;
+        --bg-card: #1e293b;
+        --bg-hover: #334155;
+        --accent-blue: #3b82f6;
+        --accent-cyan: #06b6d4;
+        --accent-green: #10b981;
+        --accent-yellow: #f59e0b;
+        --accent-red: #ef4444;
+        --accent-purple: #8b5cf6;
+        --accent-orange: #f97316;
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --text-muted: #475569;
+        --border: #334155;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        background: var(--bg-deep);
+        color: var(--text-primary);
+        font-family: "Segoe UI", system-ui, sans-serif;
+        min-height: 100vh;
+        margin: 0;
+      }
+      a {
+        color: inherit;
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+      h5 {
+        margin: 0;
+        font-size: 1rem;
+      }
+      .container-fluid {
+        width: 100%;
+      }
+      .row {
+        --gutter: 0px;
+        display: flex;
+        flex-wrap: wrap;
+        margin-left: calc(var(--gutter) / -2);
+        margin-right: calc(var(--gutter) / -2);
+      }
+      .row > * {
+        padding-left: calc(var(--gutter) / 2);
+        padding-right: calc(var(--gutter) / 2);
+      }
+      .g-0 {
+        --gutter: 0px;
+      }
+      .g-3 {
+        --gutter: 16px;
+      }
+      .col {
+        flex: 1 1 0%;
+        min-width: 0;
+      }
+      .col-auto {
+        flex: 0 0 auto;
+      }
+      .col-6 {
+        flex: 0 0 50%;
+        max-width: 50%;
+      }
+      .col-md-3,
+      .col-md-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+      }
+      .d-flex {
+        display: flex;
+      }
+      .d-none {
+        display: none;
+      }
+      .d-lg-block {
+        display: none;
+      }
+      .flex-column {
+        flex-direction: column;
+      }
+      .flex-wrap {
+        flex-wrap: wrap;
+      }
+      .justify-content-between {
+        justify-content: space-between;
+      }
+      .justify-content-end {
+        justify-content: flex-end;
+      }
+      .align-items-center {
+        align-items: center;
+      }
+      .align-items-start {
+        align-items: flex-start;
+      }
+      .gap-2 {
+        gap: 8px;
+      }
+      .gap-3 {
+        gap: 16px;
+      }
+      .p-0 {
+        padding: 0 !important;
+      }
+      .p-1 {
+        padding: 4px !important;
+      }
+      .p-2 {
+        padding: 8px !important;
+      }
+      .p-4 {
+        padding: 24px !important;
+      }
+      .px-0 {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+      }
+      .px-4 {
+        padding-left: 24px !important;
+        padding-right: 24px !important;
+      }
+      .py-2 {
+        padding-top: 8px !important;
+        padding-bottom: 8px !important;
+      }
+      .mb-0 {
+        margin-bottom: 0 !important;
+      }
+      .mb-1 {
+        margin-bottom: 4px !important;
+      }
+      .mb-3 {
+        margin-bottom: 16px !important;
+      }
+      .mb-4 {
+        margin-bottom: 24px !important;
+      }
+      .mt-1 {
+        margin-top: 4px !important;
+      }
+      .ms-1 {
+        margin-left: 4px !important;
+      }
+      .ms-2 {
+        margin-left: 8px !important;
+      }
+      .small {
+        font-size: 0.875rem;
+      }
+      .text-center {
+        text-align: center;
+      }
+      .text-muted {
+        color: var(--text-muted) !important;
+      }
+      .text-primary {
+        color: var(--text-primary) !important;
+      }
+      .text-danger {
+        color: var(--accent-red) !important;
+      }
+      .text-info {
+        color: var(--accent-cyan) !important;
+      }
+      .text-warning {
+        color: var(--accent-yellow) !important;
+      }
+      .fw-bold {
+        font-weight: 700;
+      }
+      .sticky-top {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+      }
+      .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--bg-dark);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--bg-hover);
+        border-radius: 3px;
+      }
+      .navbar-brand {
+        font-size: 1.4rem;
+        font-weight: 700;
+        background: linear-gradient(
+          135deg,
+          var(--accent-blue),
+          var(--accent-cyan)
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .navbar {
+        background: var(--bg-dark) !important;
+        border-bottom: 1px solid var(--border);
+      }
+      .navbar .container-fluid {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        min-height: 58px;
+      }
+      .stat-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+      }
+      .stat-card:hover {
+        border-color: var(--accent-blue);
+        transform: translateY(-2px);
+      }
+      .stat-card .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .stat-card .stat-label {
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+        margin-top: 4px;
+      }
+      .stat-card .stat-icon {
+        font-size: 1.8rem;
+        opacity: 0.7;
+      }
+      .panel {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .panel-header {
+        background: var(--bg-dark);
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+      .panel-body {
+        padding: 16px;
+      }
+      .script-row {
+        background: var(--bg-dark);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 8px;
+        transition: all 0.2s;
+        cursor: pointer;
+      }
+      .script-row:hover {
+        border-color: var(--accent-blue);
+        background: var(--bg-hover);
+      }
+      .script-row.selected {
+        border-color: var(--accent-cyan);
+      }
+      .badge-type-external {
+        background: rgba(59, 130, 246, 0.2);
+        color: var(--accent-blue);
+        border: 1px solid var(--accent-blue);
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 20px;
+      }
+      .badge-type-inline {
+        background: rgba(139, 92, 246, 0.2);
+        color: var(--accent-purple);
+        border: 1px solid var(--accent-purple);
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 20px;
+      }
+      .badge-domain {
+        background: rgba(16, 185, 129, 0.15);
+        color: var(--accent-green);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 20px;
+      }
+      .badge-warn {
+        background: rgba(245, 158, 11, 0.15);
+        color: var(--accent-yellow);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 20px;
+      }
+      .badge-danger {
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--accent-red);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 20px;
+      }
+      .code-viewer {
+        background: var(--bg-deep);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 20px;
+        font-family: "Fira Code", "Cascadia Code", monospace;
+        font-size: 12px;
+        line-height: 1.7;
+        overflow-x: auto;
+        max-height: 500px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .secret-item {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 8px;
+        font-family: monospace;
+        font-size: 0.82rem;
+      }
+      .secret-item .secret-type {
+        color: var(--accent-red);
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+      .secret-item .secret-value {
+        color: var(--accent-yellow);
+        word-break: break-all;
+      }
+      .endpoint-item {
+        background: rgba(6, 182, 212, 0.08);
+        border: 1px solid rgba(6, 182, 212, 0.25);
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: monospace;
+        font-size: 0.82rem;
+      }
+      .method-badge {
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 4px;
+        min-width: 46px;
+        text-align: center;
+      }
+      .method-GET {
+        background: rgba(16, 185, 129, 0.2);
+        color: var(--accent-green);
+      }
+      .method-POST {
+        background: rgba(59, 130, 246, 0.2);
+        color: var(--accent-blue);
+      }
+      .method-PUT {
+        background: rgba(245, 158, 11, 0.2);
+        color: var(--accent-yellow);
+      }
+      .method-DELETE {
+        background: rgba(239, 68, 68, 0.2);
+        color: var(--accent-red);
+      }
+      .method-UNKNOWN {
+        background: rgba(148, 163, 184, 0.2);
+        color: var(--text-secondary);
+      }
+      .tab-nav {
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 20px;
+      }
+      .tab-nav .nav-link {
+        color: var(--text-secondary);
+        border: none;
+        padding: 10px 18px;
+        font-size: 0.88rem;
+        border-bottom: 2px solid transparent;
+        background: none;
+        cursor: pointer;
+      }
+      .tab-nav .nav-link:hover {
+        color: var(--text-primary);
+      }
+      .tab-nav .nav-link.active {
+        color: var(--accent-cyan);
+        border-bottom: 2px solid var(--accent-cyan);
+      }
+      .form-control,
+      .form-select {
+        background: var(--bg-dark) !important;
+        border: 1px solid var(--border) !important;
+        color: var(--text-primary) !important;
+        border-radius: 8px;
+      }
+      .form-control:focus,
+      .form-select:focus {
+        border-color: var(--accent-blue) !important;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+      }
+      .form-control::placeholder {
+        color: var(--text-muted) !important;
+      }
+      .btn-primary-custom {
+        background: var(--accent-blue);
+        border: none;
+        color: white;
+        padding: 7px 16px;
+        border-radius: 7px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn-primary-custom:hover {
+        background: #2563eb;
+        transform: translateY(-1px);
+      }
+      .btn-outline-custom {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        padding: 7px 16px;
+        border-radius: 7px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn-outline-custom:hover {
+        border-color: var(--accent-blue);
+        color: var(--accent-blue);
+      }
+      .btn-sm-icon {
+        background: var(--bg-hover);
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        width: 30px;
+        height: 30px;
+        border-radius: 6px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.78rem;
+        transition: all 0.2s;
+      }
+      .btn-sm-icon:hover {
+        border-color: var(--accent-cyan);
+        color: var(--accent-cyan);
+      }
+      #graphContainer {
+        background: var(--bg-deep);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      #graphContainer svg {
+        width: 100%;
+      }
+      .node circle {
+        stroke-width: 2px;
+        cursor: pointer;
+      }
+      .node text {
+        font-size: 11px;
+        fill: var(--text-primary);
+      }
+      .link {
+        stroke-opacity: 0.5;
+      }
+      .progress-bar-custom {
+        height: 3px;
+        background: linear-gradient(
+          90deg,
+          var(--accent-blue),
+          var(--accent-cyan)
+        );
+        border-radius: 2px;
+        transition: width 0.3s;
+      }
+      .scan-progress {
+        display: none;
+        margin-bottom: 16px;
+      }
+      .scan-progress.active {
+        display: block;
+      }
+      .highlight-url {
+        color: var(--accent-cyan);
+      }
+      .highlight-secret {
+        color: var(--accent-red);
+        background: rgba(239, 68, 68, 0.1);
+        padding: 0 3px;
+        border-radius: 3px;
+      }
+      .highlight-storage {
+        color: var(--accent-yellow);
+      }
+      .highlight-cookie {
+        color: var(--accent-orange);
+      }
+      .highlight-token {
+        color: var(--accent-purple);
+      }
+      .highlight-http {
+        color: var(--accent-green);
+      }
+      .highlight-endpoint {
+        color: var(--accent-cyan);
+        font-weight: bold;
+      }
+      .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: var(--text-muted);
+      }
+      .empty-state .icon {
+        font-size: 3rem;
+        margin-bottom: 10px;
+        opacity: 0.4;
+      }
+      .toast-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999;
+      }
+      .toast-msg {
+        background: var(--bg-card);
+        border: 1px solid var(--accent-green);
+        color: var(--accent-green);
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        animation: fadeIn 0.2s ease;
+        margin-top: 8px;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .resize-handle {
+        height: 5px;
+        background: var(--border);
+        cursor: ns-resize;
+        transition: background 0.2s;
+      }
+      .resize-handle:hover {
+        background: var(--accent-blue);
+      }
+      .dep-tree-item {
+        padding: 6px 10px;
+        border-left: 2px solid var(--border);
+        margin-left: 10px;
+        margin-bottom: 4px;
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+      }
+      .dep-tree-item.root {
+        border-left-color: var(--accent-blue);
+        color: var(--text-primary);
+      }
+      .filter-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: rgba(59, 130, 246, 0.15);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        color: var(--accent-blue);
+        border-radius: 20px;
+        padding: 3px 10px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        margin: 3px;
+        transition: all 0.2s;
+      }
+      .filter-chip:hover {
+        background: rgba(59, 130, 246, 0.3);
+      }
+      .filter-chip.active {
+        background: var(--accent-blue);
+        color: white;
+      }
+      .export-btn {
+        background: linear-gradient(135deg, var(--accent-green), #059669);
+        border: none;
+        color: white;
+        padding: 8px 18px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .export-btn:hover {
+        opacity: 0.85;
+        transform: translateY(-1px);
+      }
+      .btn-primary-custom:disabled,
+      .btn-outline-custom:disabled,
+      .export-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none;
+      }
+      .loading-spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid var(--border);
+        border-top-color: var(--accent-blue);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-right: 6px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .severity-critical {
+        color: var(--accent-red);
+      }
+      .severity-high {
+        color: var(--accent-orange);
+      }
+      .severity-medium {
+        color: var(--accent-yellow);
+      }
+      .severity-low {
+        color: var(--accent-green);
+      }
+      .sidebar {
+        background: var(--bg-dark);
+        border-right: 1px solid var(--border);
+        height: calc(100vh - 58px);
+        overflow-y: auto;
+        position: sticky;
+        top: 58px;
+      }
+      .sidebar-item {
+        padding: 10px 16px;
+        cursor: pointer;
+        border-left: 3px solid transparent;
+        font-size: 0.88rem;
+        color: var(--text-secondary);
+        transition: all 0.2s;
+      }
+      .sidebar-item:hover {
+        background: var(--bg-card);
+        color: var(--text-primary);
+      }
+      .sidebar-item.active {
+        border-left-color: var(--accent-cyan);
+        color: var(--accent-cyan);
+        background: rgba(6, 182, 212, 0.08);
+      }
+      .wsocket-item {
+        background: rgba(139, 92, 246, 0.08);
+        border: 1px solid rgba(139, 92, 246, 0.25);
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin-bottom: 6px;
+        font-size: 0.82rem;
+        font-family: monospace;
+      }
+      .cors-item {
+        background: rgba(245, 158, 11, 0.08);
+        border: 1px solid rgba(245, 158, 11, 0.25);
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin-bottom: 6px;
+        font-size: 0.82rem;
+      }
+      .subdomain-item {
+        background: rgba(16, 185, 129, 0.08);
+        border: 1px solid rgba(16, 185, 129, 0.25);
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin-bottom: 6px;
+        font-size: 0.82rem;
+        font-family: monospace;
+      }
+      @media (min-width: 768px) {
+        .col-md-3 {
+          flex: 0 0 25%;
+          max-width: 25%;
+        }
+        .col-md-6 {
+          flex: 0 0 50%;
+          max-width: 50%;
+        }
+      }
+      @media (min-width: 992px) {
+        .d-lg-block {
+          display: block;
+        }
+      }
+      @media (max-width: 991px) {
+        .sidebar {
+          position: static;
+          height: auto;
+        }
+      }
+      @media (max-width: 767px) {
+        .navbar .container-fluid {
+          align-items: flex-start;
+          flex-direction: column;
+          padding-top: 12px !important;
+          padding-bottom: 12px !important;
+        }
+        .col-6 {
+          flex: 0 0 100%;
+          max-width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-dark sticky-top">
+      <div class="container-fluid px-4">
+        <span class="navbar-brand">⚡ JS Recon Dashboard v2</span>
+        <div class="d-flex align-items-center gap-3" id="navActions">
+          <span id="targetUrl" class="text-muted small"></span>
+          <button class="btn-primary-custom" id="scanButton">
+            <span id="scanBtnText">🔍 Scan Page</span>
+          </button>
+          <button class="export-btn" id="exportButton">
+            📤 Export
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container-fluid px-0">
+      <div class="row g-0">
+        <div class="col-auto sidebar d-none d-lg-block" style="width: 200px">
+          <div
+            style="
+              padding: 12px 16px;
+              font-size: 0.75rem;
+              color: var(--text-muted);
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              margin-top: 8px;
+            "
+          >
+            Navigation
+          </div>
+          <div class="sidebar-item active" data-section="overview">
+            📊 Overview
+          </div>
+          <div class="sidebar-item" data-section="scripts">
+            📜 Scripts
+          </div>
+          <div class="sidebar-item" data-section="secrets">
+            🔐 Secrets
+          </div>
+          <div class="sidebar-item" data-section="endpoints">
+            🌐 Endpoints
+          </div>
+          <div class="sidebar-item" data-section="network">
+            📡 Network
+          </div>
+          <div class="sidebar-item" data-section="subdomains">
+            🔗 Subdomains
+          </div>
+          <div class="sidebar-item" data-section="graph">
+            🕸 Call Graph
+          </div>
+          <div class="sidebar-item" data-section="deptree">
+            🌲 Dep Tree
+          </div>
+          <div class="sidebar-item" data-section="cors">
+            🛡 CORS / WS
+          </div>
+        </div>
+
+        <div
+          class="col"
+          style="min-height: calc(100vh - 58px); overflow-y: auto"
+        >
+          <div class="p-4">
+            <div class="scan-progress" id="scanProgress">
+              <div class="d-flex justify-content-between mb-1">
+                <small class="text-muted" id="scanStatus">Scanning...</small>
+                <small class="text-muted" id="scanPct">0%</small>
+              </div>
+              <div
+                style="
+                  background: var(--bg-card);
+                  border-radius: 4px;
+                  height: 4px;
+                "
+              >
+                <div
+                  class="progress-bar-custom"
+                  id="progressBar"
+                  style="width: 0%"
+                ></div>
+              </div>
+            </div>
+
+            <!-- OVERVIEW -->
+            <div id="section-overview">
+              <div class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                  <div class="stat-card" data-open-section="scripts">
+                    <div
+                      class="d-flex justify-content-between align-items-start"
+                    >
+                      <div>
+                        <div class="stat-value text-primary" id="statScripts">
+                          0
+                        </div>
+                        <div class="stat-label">Total Scripts</div>
+                      </div>
+                      <div class="stat-icon">📜</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="stat-card" data-open-section="secrets">
+                    <div
+                      class="d-flex justify-content-between align-items-start"
+                    >
+                      <div>
+                        <div class="stat-value text-danger" id="statSecrets">
+                          0
+                        </div>
+                        <div class="stat-label">Secrets Found</div>
+                      </div>
+                      <div class="stat-icon">🔐</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="stat-card" data-open-section="endpoints">
+                    <div
+                      class="d-flex justify-content-between align-items-start"
+                    >
+                      <div>
+                        <div class="stat-value text-info" id="statEndpoints">
+                          0
+                        </div>
+                        <div class="stat-label">Endpoints</div>
+                      </div>
+                      <div class="stat-icon">🌐</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="stat-card" data-open-section="network">
+                    <div
+                      class="d-flex justify-content-between align-items-start"
+                    >
+                      <div>
+                        <div class="stat-value text-warning" id="statNetwork">
+                          0
+                        </div>
+                        <div class="stat-label">Network Calls</div>
+                      </div>
+                      <div class="stat-icon">📡</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="stat-card">
+                    <div
+                      class="d-flex justify-content-between align-items-start"
+                    >
+                      <div>
+                        <div
+                          class="stat-value"
+                          style="color: var(--accent-green)"
+                          id="statSubdomains"
+                        >
+                          0
+                        </div>
+                        <div class="stat-label">Subdomains</div>
+                      </div>
+                      <div class="stat-icon">🔗</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="stat-card">
+                    <div
+                      class="d-flex justify-content-between align-items-start"
+                    >
+                      <div>
+                        <div
+                          class="stat-value"
+                          style="color: var(--accent-purple)"
+                          id="statWS"
+                        >
+                          0
+                        </div>
+                        <div class="stat-label">WebSockets</div>
+                      </div>
+                      <div class="stat-icon">🔌</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="stat-card">
+                    <div
+                      class="d-flex justify-content-between align-items-start"
+                    >
+                      <div>
+                        <div
+                          class="stat-value"
+                          style="color: var(--accent-orange)"
+                          id="statCORS"
+                        >
+                          0
+                        </div>
+                        <div class="stat-label">CORS Issues</div>
+                      </div>
+                      <div class="stat-icon">🛡</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="stat-card">
+                    <div
+                      class="d-flex justify-content-between align-items-start"
+                    >
+                      <div>
+                        <div
+                          class="stat-value"
+                          style="color: var(--accent-cyan)"
+                          id="statSize"
+                        >
+                          0KB
+                        </div>
+                        <div class="stat-label">Total JS Size</div>
+                      </div>
+                      <div class="stat-icon">📦</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="panel">
+                    <div class="panel-header">🚨 Risk Summary</div>
+                    <div class="panel-body" id="riskSummary">
+                      <div class="empty-state">
+                        <div class="icon">🔍</div>
+                        <div>Run a scan to see results</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="panel">
+                    <div class="panel-header">📊 Domain Breakdown</div>
+                    <div class="panel-body" id="domainBreakdown">
+                      <div class="empty-state">
+                        <div class="icon">🌐</div>
+                        <div>Run a scan to see domains</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SCRIPTS -->
+            <div id="section-scripts" style="display: none">
+              <div
+                class="d-flex justify-content-between align-items-center mb-3"
+              >
+                <h5 class="mb-0">📜 Scripts</h5>
+                <div class="d-flex gap-2">
+                  <input
+                    class="form-control"
+                    style="width: 220px"
+                    placeholder="Search scripts..."
+                    id="scriptSearch"
+                  />
+                  <select
+                    class="form-select"
+                    style="width: 130px"
+                    id="scriptTypeFilter"
+                  >
+                    <option value="all">All Types</option>
+                    <option value="external">External</option>
+                    <option value="inline">Inline</option>
+                  </select>
+                </div>
+              </div>
+              <div id="filterChips" class="mb-3"></div>
+              <div id="scriptList"></div>
+              <div id="scriptViewer" style="display: none; margin-top: 16px">
+                <div class="panel">
+                  <div class="panel-header">
+                    <span id="viewerTitle">Script Viewer</span>
+                    <div class="d-flex gap-2">
+                      <button
+                        class="btn-sm-icon"
+                        id="copyViewerButton"
+                        title="Copy"
+                      >
+                        📋
+                      </button>
+                      <button
+                        class="btn-sm-icon"
+                        id="downloadViewerButton"
+                        title="Download"
+                      >
+                        ⬇
+                      </button>
+                      <button
+                        class="btn-sm-icon"
+                        id="closeViewerButton"
+                        title="Close"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                  <div class="panel-body p-0">
+                    <div class="code-viewer" id="viewerCode"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECRETS -->
+            <div id="section-secrets" style="display: none">
+              <div
+                class="d-flex justify-content-between align-items-center mb-3"
+              >
+                <h5 class="mb-0">🔐 Secrets & Sensitive Data</h5>
+                <div class="d-flex gap-2">
+                  <input
+                    class="form-control"
+                    style="width: 220px"
+                    placeholder="Search secrets..."
+                    id="secretSearch"
+                  />
+                </div>
+              </div>
+              <div class="mb-3" id="secretFilterChips"></div>
+              <div id="secretList"></div>
+            </div>
+
+            <!-- ENDPOINTS -->
+            <div id="section-endpoints" style="display: none">
+              <div
+                class="d-flex justify-content-between align-items-center mb-3"
+              >
+                <h5 class="mb-0">🌐 Discovered Endpoints</h5>
+                <input
+                  class="form-control"
+                  style="width: 220px"
+                  placeholder="Filter endpoints..."
+                  id="endpointSearch"
+                />
+              </div>
+              <div id="endpointList"></div>
+            </div>
+
+            <!-- NETWORK -->
+            <div id="section-network" style="display: none">
+              <h5 class="mb-3">📡 Network Calls</h5>
+              <div id="networkList"></div>
+            </div>
+
+            <!-- SUBDOMAINS -->
+            <div id="section-subdomains" style="display: none">
+              <h5 class="mb-3">🔗 Subdomain Leaks</h5>
+              <div id="subdomainList"></div>
+            </div>
+
+            <!-- GRAPH -->
+            <div id="section-graph" style="display: none">
+              <div
+                class="d-flex justify-content-between align-items-center mb-3"
+              >
+                <h5 class="mb-0">🕸 API Call Graph</h5>
+                <div class="d-flex gap-2">
+                  <button class="btn-outline-custom" id="resetGraphButton">
+                    Reset View
+                  </button>
+                  <button class="btn-outline-custom" id="toggleGraphLayoutButton">
+                    Toggle Layout
+                  </button>
+                </div>
+              </div>
+              <div id="graphContainer" style="height: 520px"></div>
+            </div>
+
+            <!-- DEPTREE -->
+            <div id="section-deptree" style="display: none">
+              <h5 class="mb-3">🌲 Script Dependency Tree</h5>
+              <div id="depTree"></div>
+            </div>
+
+            <!-- CORS / WS -->
+            <div id="section-cors" style="display: none">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="panel">
+                    <div class="panel-header">🛡 CORS Indicators</div>
+                    <div class="panel-body" id="corsList"></div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="panel">
+                    <div class="panel-header">🔌 WebSocket Connections</div>
+                    <div class="panel-body" id="wsList"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+    <script src="./resourceFetcher.app.js" data-recon-app="true"></script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+HTTP/1.1 200 OK
+Access-Control-Allow-Origin: *
+Content-Type: image/jpeg
+Content-Length: 1238485
+Content-Disposition: attachment; filename="test.jpg"
+Cache-Control: no-store
+X-Download-Tool: aria2c
+Date: Sun, 08 Mar 2026 16:09:01 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
